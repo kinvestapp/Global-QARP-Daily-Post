@@ -46,6 +46,10 @@ jobs:
         run: |
           git config user.name "qarp-bot"
           git config user.email "actions@github.com"
-          git add picks_log.csv
-          git diff --staged --quiet || git commit -m "Update picks log"
-          git push
+          if [ -f picks_log.csv ]; then
+            git add picks_log.csv
+            git diff --staged --quiet || git commit -m "Update picks log"
+            git push
+          else
+            echo "picks_log.csv not found — likely a skipped/off-schedule run. Nothing to commit."
+          fi
