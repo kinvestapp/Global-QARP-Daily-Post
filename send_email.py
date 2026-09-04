@@ -107,10 +107,24 @@ def _clean_gmail_password(raw: str) -> str:
     return re.sub(r"\s+", "", raw)
 
 
+def _require_env(name: str) -> str:
+    """Fetches a required env var and fails fast with a clear message if it's
+    missing or blank — rather than letting an empty value silently reach
+    smtplib, which produces a cryptic 'recipient refused' error instead of
+    saying what's actually wrong."""
+    value = os.environ.get(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"Required secret/env var '{name}' is missing or empty. "
+            f"Check Settings → Secrets and variables → Actions in this repo."
+        )
+    return value
+
+
 def send_email(results_by_exchange: dict):
-    gmail_user = os.environ["GMAIL_USER"]
-    gmail_app_password = _clean_gmail_password(os.environ["GMAIL_APP_PASSWORD"])
-    recipient = os.environ["RECIPIENT_EMAIL"]
+    gmail_user = _require_env("GMAIL_USER")
+    gmail_app_password = _clean_gmail_password(_require_env("GMAIL_APP_PASSWORD"))
+    recipient = _require_env("RECIPIENT_EMAIL")
 
     scan_date = datetime.now().strftime("%d %B %Y")
     html = build_html(results_by_exchange, scan_date)
@@ -131,9 +145,9 @@ def send_review_email(ranked_stocks, commentary_by_ticker, scan_date: str,
     """Daily email per market. Contains a fun/wild finance fact, a market
     news roundup, and the top QARP/value picks with commentary and metrics.
     You publish to Substack manually from this — no automated posting step."""
-    gmail_user = os.environ["GMAIL_USER"]
-    gmail_app_password = _clean_gmail_password(os.environ["GMAIL_APP_PASSWORD"])
-    recipient = os.environ["RECIPIENT_EMAIL"]
+    gmail_user = _require_env("GMAIL_USER")
+    gmail_app_password = _clean_gmail_password(_require_env("GMAIL_APP_PASSWORD"))
+    recipient = _require_env("RECIPIENT_EMAIL")
     news_fact = news_fact or {}
 
     fun_fact_html = ""
