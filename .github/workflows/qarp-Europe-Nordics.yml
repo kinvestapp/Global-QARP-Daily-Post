@@ -1,0 +1,51 @@
+name: QARP Daily — Europe-Nordics (Tuesday)
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 22 * * 2"
+    - cron: "0 21 * * 2"
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: "Run scan regardless of scheduled day/time"
+        required: false
+        default: "false"
+
+jobs:
+  qarp-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install --upgrade yfinance requests anthropic beautifulsoup4
+
+      - name: Log yfinance version
+        run: pip show yfinance | grep -E "Name|Version"
+
+      - name: Run QARP scan — Europe-Nordics
+        env:
+          MARKET: "EUROPE_NORDICS"
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+          MIN_MARKET_CAP: ${{ secrets.MIN_MARKET_CAP }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FORCE_RUN: ${{ github.event.inputs.force_run }}
+        run: python run_qarp_scan.py
+
+      - name: Commit picks log
+        run: |
+          git config user.name "qarp-bot"
+          git config user.email "actions@github.com"
+          git add picks_log.csv
+          git diff --staged --quiet || git commit -m "Update picks log"
+          git push
